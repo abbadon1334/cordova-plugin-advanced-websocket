@@ -9,6 +9,7 @@
 - (void)wsConnect:(CDVInvokedUrlCommand*)command;
 - (void)wsAddListeners:(CDVInvokedUrlCommand*)command;
 - (void)wsSend:(CDVInvokedUrlCommand*)command;
+- (void)wsSendData:(CDVInvokedUrlCommand*)command;
 - (void)wsClose:(CDVInvokedUrlCommand*)command;
 
 @end

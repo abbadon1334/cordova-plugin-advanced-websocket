@@ -23,6 +23,9 @@ var CordovaWebsocketPlugin = {
     wsSend: function(wsId, message) {
         exec(null, null, PLUGIN_NAME, 'wsSend', [wsId, message]);
     },
+    wsSendData: function(wsId, message) {
+        exec(null, null, PLUGIN_NAME, 'wsSendData', [wsId, message]);
+    },
     wsClose: function(wsId, code, reason) {
         exec(null, null, PLUGIN_NAME, 'wsClose', [wsId, code, reason]);
     }

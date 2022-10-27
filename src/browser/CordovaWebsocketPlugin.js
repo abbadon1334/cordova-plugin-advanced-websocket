@@ -39,6 +39,7 @@ const CordovaWebsocketPlugin = {
     wsConnect: function(wsOptions, listener, success, error) {
         const webSocketId = createId();
         const webSocket = new WebSocket(wsOptions.url);
+        webSocket.binaryType = "arraybuffer";
 
         let timeoutHandler;
         if (wsOptions.timeout && wsOptions.timeout > 0) {
@@ -71,6 +72,9 @@ const CordovaWebsocketPlugin = {
         if (webSocket) {
             webSocket.send(message);
         }
+    },
+    wsSendData: function(webSocketId, message) {
+        this.wsSend(webSocketId, message);
     },
     wsClose: function(webSocketId, code, reason) {
         const webSocket = connections[webSocketId];

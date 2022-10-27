@@ -20,6 +20,7 @@
                 callbackId:(NSString*)callbackId;
 - (void)wsAddListeners:(NSString*)recvCallbackId flushRecvBuffer:(BOOL)flushRecvBuffer;
 - (void)wsSendMessage:(NSString*)message;
+- (void)wsSendData:(NSData*)data;
 - (void)wsClose;
 - (void)wsClose:(NSInteger)code reason:(NSString*)reason;
 

@@ -65,6 +65,13 @@
     }
 }
 
+- (void)wsSendData:(NSData*)data;
+{
+    if (_webSocket != nil) {
+        [_webSocket sendData:data];
+    }
+}
+
 - (void)wsClose;
 {
     if (_webSocket != nil) {

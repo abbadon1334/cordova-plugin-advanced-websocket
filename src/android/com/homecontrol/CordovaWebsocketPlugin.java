@@ -60,6 +60,8 @@ public class CordovaWebsocketPlugin extends CordovaPlugin {
             this.wsAddListeners(args, callbackContext);
         } else if (action.equals("wsSend")) {
             this.wsSend(args, callbackContext);
+        } else if (action.equals("wsSendData")) {
+            this.wsSendData(args, callbackContext);
         } else if (action.equals("wsClose")) {
             this.wsClose(args, callbackContext);
         }
@@ -114,6 +116,18 @@ public class CordovaWebsocketPlugin extends CordovaPlugin {
 
             WebSocketAdvanced ws = this.webSockets.get(webSocketId);
             ws.send(message);
+        } catch (JSONException e) {
+            Log.e(TAG, e.getMessage());
+        }
+    }
+
+    private void wsSendData(JSONArray args, CallbackContext callbackContext) {
+        try {
+            String webSocketId = args.getString(0);
+            String message = args.getString(1);
+
+            WebSocketAdvanced ws = this.webSockets.get(webSocketId);
+            ws.send(message.getBytes());
         } catch (JSONException e) {
             Log.e(TAG, e.getMessage());
         }
