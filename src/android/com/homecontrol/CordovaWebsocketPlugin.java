@@ -12,15 +12,12 @@ import org.json.JSONException;
 
 import android.util.Log;
 
-import java.util.Date;
 import java.util.Iterator;
 import java.util.UUID;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.ArrayList;
-
-import java.io.IOException;
 
 import okhttp3.WebSocket;
 import okhttp3.OkHttpClient;
@@ -45,7 +42,7 @@ import javax.net.ssl.X509TrustManager;
 public class CordovaWebsocketPlugin extends CordovaPlugin {
     private static final String TAG = "CordovaWebsocketPlugin";
 
-    private Map<String, WebSocketAdvanced> webSockets = new ConcurrentHashMap<String, WebSocketAdvanced>();
+    private final Map<String, WebSocketAdvanced> webSockets = new ConcurrentHashMap<>();
 
     public void initialize(CordovaInterface cordova, CordovaWebView webView) {
         super.initialize(cordova, webView);
@@ -54,16 +51,22 @@ public class CordovaWebsocketPlugin extends CordovaPlugin {
     }
 
     public boolean execute(String action, JSONArray args, final CallbackContext callbackContext) throws JSONException {
-        if (action.equals("wsConnect")) {
-            this.wsConnect(args, callbackContext);
-        } else if (action.equals("wsAddListeners")) {
-            this.wsAddListeners(args, callbackContext);
-        } else if (action.equals("wsSend")) {
-            this.wsSend(args, callbackContext);
-        } else if (action.equals("wsSendData")) {
-            this.wsSendData(args, callbackContext);
-        } else if (action.equals("wsClose")) {
-            this.wsClose(args, callbackContext);
+        switch (action) {
+            case "wsConnect":
+                this.wsConnect(args, callbackContext);
+                break;
+            case "wsAddListeners":
+                this.wsAddListeners(args, callbackContext);
+                break;
+            case "wsSend":
+                this.wsSend(args, callbackContext);
+                break;
+            case "wsSendData":
+                this.wsSendData(args, callbackContext);
+                break;
+            case "wsClose":
+                this.wsClose(args, callbackContext);
+                break;
         }
         return true;
     }
@@ -126,8 +129,18 @@ public class CordovaWebsocketPlugin extends CordovaPlugin {
             String webSocketId = args.getString(0);
             String message = args.getString(1);
 
+            JSONObject jobject = new JSONObject(message);
+            int payloadLength = jobject.names() == null ? 0 : jobject.names().length();
+            byte[] payload = new byte[payloadLength];
+
+            for(int i = 0; i<payloadLength; i++){
+                payload[i] = (byte) jobject.getInt(jobject.names().getString(i));
+            }
+
             WebSocketAdvanced ws = this.webSockets.get(webSocketId);
-            ws.send(message.getBytes());
+
+            ws.send(ByteString.of(payload));
+
         } catch (JSONException e) {
             Log.e(TAG, e.getMessage());
         }
@@ -147,7 +160,7 @@ public class CordovaWebsocketPlugin extends CordovaPlugin {
     }
 
     private class WebSocketAdvanced extends WebSocketListener {
-        
+
         private WebSocket webSocket;
         private CallbackContext callbackContext;
         private CallbackContext recvCallbackContext = null;
@@ -161,7 +174,7 @@ public class CordovaWebsocketPlugin extends CordovaPlugin {
             try {
                 this.callbackContext = callbackContext;
                 this.webSocketId = UUID.randomUUID().toString();
-                this.messageBuffer = new ArrayList<PluginResult>();
+                this.messageBuffer = new ArrayList<>();
 
                 String wsUrl =              wsOptions.getString("url");
                 int timeout =               wsOptions.optInt("timeout", 0);
@@ -175,16 +188,16 @@ public class CordovaWebsocketPlugin extends CordovaPlugin {
                 clientBuilder.readTimeout(timeout, TimeUnit.MILLISECONDS);
                 clientBuilder.pingInterval(pingInterval, TimeUnit.MILLISECONDS);
 
+
                 if (wsUrl.startsWith("wss://") && acceptAllCerts) {
                     try {
                         final X509TrustManager gullibleTrustManager = new GullibleTrustManager();
                         final HostnameVerifier gullibleHostnameVerifier = new GullibleHostnameVerifier();
                         final SSLContext sslContext = SSLContext.getInstance("SSL");
-                        KeyManager[] keyManagers = null;
                         TrustManager[] trustManagers = new TrustManager[]{gullibleTrustManager};
                         SecureRandom secureRandom = new SecureRandom();
-                        sslContext.init(keyManagers, trustManagers, secureRandom);
-                        
+                        sslContext.init(null, trustManagers, secureRandom);
+
                         // Create an ssl socket factory with our all-trusting manager
                         final SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
 
@@ -211,13 +224,10 @@ public class CordovaWebsocketPlugin extends CordovaPlugin {
 
                 final WebSocketAdvanced self = this;
 
-                cordova.getThreadPool().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        self.webSocket = client.newWebSocket(request, self);
-                        // Trigger shutdown of the dispatcher's executor so this process can exit cleanly.
-                        self.client.dispatcher().executorService().shutdown();
-                    }
+                cordova.getThreadPool().execute(() -> {
+                    self.webSocket = client.newWebSocket(request, self);
+                    // Trigger shutdown of the dispatcher's executor so this process can exit cleanly.
+                    self.client.dispatcher().executorService().shutdown();
                 });
             } catch (JSONException e) {
                 Log.e(TAG, e.getMessage());
@@ -226,7 +236,7 @@ public class CordovaWebsocketPlugin extends CordovaPlugin {
 
         public void setRecvListener(final CallbackContext recvCallbackContext, boolean flushRecvBuffer) {
             this.recvCallbackContext = recvCallbackContext;
-            
+
             if (!this.messageBuffer.isEmpty() && flushRecvBuffer){
                 Iterator<PluginResult> messageIterator = this.messageBuffer.iterator();
                 while(messageIterator.hasNext()){
@@ -248,7 +258,7 @@ public class CordovaWebsocketPlugin extends CordovaPlugin {
         public boolean close(int code, String reason) {
             return this.webSocket.close(code, reason);
         }
-    
+
         @Override public void onOpen(WebSocket webSocket, Response response) {
             try {
                 JSONObject successResult = new JSONObject();
@@ -261,15 +271,15 @@ public class CordovaWebsocketPlugin extends CordovaPlugin {
                 Log.e(TAG, e.getMessage());
             }
         }
-    
+
         @Override public void onMessage(WebSocket webSocket, String text) {
             try {
                 JSONObject callbackResult = new JSONObject();
-                
+
                 callbackResult.put("callbackMethod", "onMessage");
                 callbackResult.put("webSocketId", this.webSocketId);
                 callbackResult.put("message", text);
-                
+
                 PluginResult result = new PluginResult(Status.OK, callbackResult);
                 result.setKeepCallback(true);
 
@@ -282,7 +292,7 @@ public class CordovaWebsocketPlugin extends CordovaPlugin {
                 Log.e(TAG, e.getMessage());
             }
         }
-    
+
         @Override public void onMessage(WebSocket webSocket, ByteString bytes) {
             try {
                 JSONObject callbackResult = new JSONObject();
@@ -303,7 +313,7 @@ public class CordovaWebsocketPlugin extends CordovaPlugin {
                 Log.e(TAG, e.getMessage());
             }
         }
-    
+
         @Override public void onClosing(WebSocket webSocket, int code, String reason) {
             try {
                 JSONObject callbackResult = new JSONObject();
@@ -322,20 +332,15 @@ public class CordovaWebsocketPlugin extends CordovaPlugin {
                 Log.e(TAG, e.getMessage());
             }
         }
-    
+
         @Override public void onFailure(WebSocket webSocket, Throwable t, Response response) {
             try {
                 JSONObject failResult = new JSONObject();
 
                 failResult.put("webSocketId", this.webSocketId);
-                if (t != null) {
-                    failResult.put("code", 1006); // unexpected close
-                    failResult.put("exception", t.getMessage()); 
-                } else if (response != null) {
-                    failResult.put("code", response.code());
-                    failResult.put("reason", response.message());
-                }
-                
+                failResult.put("code", response != null ? response.code() : 1006);
+                failResult.put("exception", response != null ? response.message() : t.getMessage());
+
                 if (!this.callbackContext.isFinished()) {
                     this.callbackContext.error(failResult);
                 }
@@ -345,21 +350,18 @@ public class CordovaWebsocketPlugin extends CordovaPlugin {
                     result.setKeepCallback(true);
                     this.recvCallbackContext.sendPluginResult(result);
                 }
-            } catch (JSONException e) {
-                Log.e(TAG, e.getMessage());
             } catch (Exception e) {
                 Log.e(TAG, e.getMessage());
             }
         }
     }
 
-    private class GullibleTrustManager implements X509TrustManager {
+    private static class GullibleTrustManager implements X509TrustManager {
         private static final String TAG = "GullibleTrustManager";
 
         @Override
         public X509Certificate[] getAcceptedIssuers() {
-            X509Certificate[] x509Certificates = new X509Certificate[0];
-            return x509Certificates;
+            return new X509Certificate[0];
         }
 
         @Override
@@ -373,7 +375,7 @@ public class CordovaWebsocketPlugin extends CordovaPlugin {
                                        final String authType) throws CertificateException {
             Log.d(TAG, "authType: " + String.valueOf(authType));
         }
-    };
+    }
 
     private class GullibleHostnameVerifier implements HostnameVerifier {
 

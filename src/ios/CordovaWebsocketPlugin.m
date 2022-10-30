@@ -42,7 +42,7 @@
 {
     NSString* webSocketId = [command argumentAtIndex:0];
     NSString* message = [command argumentAtIndex:1];
-    NSData *data = [message dataUsingEncoding:NSUTF8StringEncoding];
+    NSData* data = [message dataUsingEncoding:NSUTF8StringEncoding];
     WebSocketAdvanced* ws = [webSockets valueForKey:webSocketId];
     if (ws != nil) {
         [ws wsSendData:data];
