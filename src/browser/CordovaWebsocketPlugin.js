@@ -38,7 +38,16 @@ const wsRemoveListeners = function(webSocketId) {
 const CordovaWebsocketPlugin = {
     wsConnect: function(wsOptions, listener, success, error) {
         const webSocketId = createId();
-        const webSocket = new WebSocket(wsOptions.url);
+
+        let protocols = [];
+        let headers = wsOptions.headers ? Object.keys(wsOptions.headers) : [];
+        headers.forEach(key => {
+            if (key.toString().toLowerCase() === 'sec-websocket-protocol') {
+                protocols.push(wsOptions.headers[key]);
+            }
+        });
+
+        const webSocket = new WebSocket(wsOptions.url, protocols);
         webSocket.binaryType = "arraybuffer";
 
         let timeoutHandler;
